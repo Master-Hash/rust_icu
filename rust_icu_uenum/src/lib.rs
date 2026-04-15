@@ -111,7 +111,7 @@ impl Iterator for Enumeration {
             Ok(()) => {
                 assert!(!raw.is_null());
                 // Requires that raw is a valid pointer to a C string.
-                let cstring = unsafe { ffi::CStr::from_ptr(raw) }; // Borrowing
+                let cstring = unsafe { ffi::CStr::from_ptr(raw as *const std::os::raw::c_char) }; // Borrowing
                 Some(Ok(cstring
                     .to_str()
                     .expect("could not convert to string")
@@ -153,7 +153,7 @@ pub fn ucal_open_country_time_zones(country: &str) -> Result<Enumeration, common
     // Requires that the asciiz country be a pointer to a valid C string.
     let raw_enum = unsafe {
         assert!(common::Error::is_ok(status));
-        versioned_function!(ucal_openCountryTimeZones)(asciiz_country.as_ptr(), &mut status)
+        versioned_function!(ucal_openCountryTimeZones)(asciiz_country.as_ptr() as _, &mut status)
     };
     common::Error::ok_or_warning(status)?;
     Ok(Enumeration {
@@ -187,7 +187,7 @@ pub fn ucal_open_time_zone_id_enumeration(
             // Note that for the string pointer to remain valid, we must borrow the CString from
             // asciiz_region, not move the CString out.
             match &asciiz_region {
-                Some(asciiz_region) => asciiz_region.as_ptr(),
+                Some(asciiz_region) => asciiz_region.as_ptr() as _,
                 None => std::ptr::null(),
             },
             match raw_offset {
@@ -231,7 +231,7 @@ pub fn uloc_open_keywords(locale: &str) -> Result<Enumeration, common::Error> {
     let asciiz_locale = ffi::CString::new(locale)?;
     let raw_enum = unsafe {
         assert!(common::Error::is_ok(status));
-        versioned_function!(uloc_openKeywords)(asciiz_locale.as_ptr(), &mut status)
+        versioned_function!(uloc_openKeywords)(asciiz_locale.as_ptr() as _, &mut status)
     };
     common::Error::ok_or_warning(status)?;
     // "No error but null" means that there are no keywords

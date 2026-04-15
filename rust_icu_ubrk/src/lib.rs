@@ -70,7 +70,7 @@
 use {
     rust_icu_common::{self as common, simple_drop_impl},
     rust_icu_sys::{self as sys, *},
-    rust_icu_uloc as uloc, rust_icu_ustring as ustring,
+    rust_icu_ustring as ustring,
     std::{convert::TryFrom, ffi, os::raw, ptr, rc::Rc},
 };
 
@@ -163,25 +163,25 @@ impl UBreakIterator {
         text: &str,
     ) -> Result<Self, common::Error> {
         let text = ustring::UChar::try_from(text)?;
-        let locale = uloc::ULoc::try_from(locale)?;
+        let locale = ffi::CString::new(locale)?;
         Self::try_new_ustring(type_, &locale, &text)
     }
 
     /// Implements `ubrk_open`.
     pub fn try_new_ustring(
         type_: sys::UBreakIteratorType,
-        locale: &uloc::ULoc,
+        locale: &ffi::CStr,
         text: &ustring::UChar,
     ) -> Result<Self, common::Error> {
         let mut status = common::Error::OK_CODE;
         // Clone text and get locale as a CString for break iterator to own.
-        let locale = locale.as_c_str();
+        let locale = locale.to_owned();
         let text = text.clone();
         let rep = unsafe {
             assert!(common::Error::is_ok(status));
             versioned_function!(ubrk_open)(
                 type_,
-                locale.as_ptr(),
+                locale.as_ptr() as _,
                 text.as_c_ptr(),
                 text.len() as i32,
                 &mut status,
@@ -457,7 +457,7 @@ impl UBreakIterator {
             versioned_function!(ubrk_getLocaleByType)(self.rep.as_ptr(), type_, &mut status)
         };
         common::Error::ok_or_warning(status)?;
-        let c_str = unsafe { ffi::CStr::from_ptr(char_ptr) };
+        let c_str = unsafe { ffi::CStr::from_ptr(char_ptr as *const std::os::raw::c_char) };
         let s = c_str.to_str().map(|s| s.to_owned())?;
         Ok(s)
     }
@@ -520,7 +520,7 @@ pub struct Locales {
 }
 
 impl Iterator for Locales {
-    type Item = uloc::ULoc;
+    type Item = String;
 
     /// Returns the next locale for which text breaking information is available.
     ///
@@ -530,16 +530,11 @@ impl Iterator for Locales {
             return None;
         }
         let loc_ptr = unsafe { versioned_function!(ubrk_getAvailable)(self.index) };
-        assert_ne!(loc_ptr, 0 as *const raw::c_char);
-        let c_str = unsafe { ffi::CStr::from_ptr(loc_ptr) };
-        let loc = uloc::ULoc::try_from(c_str);
-        match loc {
-            Ok(loc) => {
-                self.index += 1;
-                Some(loc)
-            }
-            _ => None,
-        }
+        assert!(!loc_ptr.is_null());
+        let c_str = unsafe { ffi::CStr::from_ptr(loc_ptr as *const std::os::raw::c_char) };
+        let loc = c_str.to_string_lossy().into_owned();
+        self.index += 1;
+        Some(loc)
     }
 }
 
