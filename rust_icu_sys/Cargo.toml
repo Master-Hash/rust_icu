@@ -19,6 +19,9 @@ keywords = ["icu", "unicode", "i18n", "l10n"]
 [dependencies]
 libc = "0.2.34"
 paste = "1.0"
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Globalization",
+], optional = true }
 
 [build-dependencies]
 anyhow = "1.0.72"
@@ -45,6 +48,7 @@ icu_version_68_plus = []
 icu_version_69_max = []
 static = []
 
+windows-sys = ["dep:windows-sys"]
 
 [badges]
 maintenance = { status = "actively-developed" }
