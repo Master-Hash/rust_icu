@@ -36,23 +36,29 @@ compile_error!("Feature `icu_config` is useless without the feature `use-bindgen
 
 // This feature combination is not inherrently a problem; we had no use case that
 // required it just yet.
-#[cfg(all(not(feature = "renaming"), not(feature = "use-bindgen")))]
+#[cfg(all(
+    not(feature = "renaming"),
+    not(feature = "use-bindgen"),
+    not(feature = "windows-sys")
+))]
 compile_error!("You must use `renaming` when not using `use-bindgen`");
 
-#[cfg(feature = "use-bindgen")]
+#[cfg(all(feature = "use-bindgen", not(feature = "windows-sys")))]
 include!(concat!(env!("OUT_DIR"), "/macros.rs"));
 #[cfg(all(
     feature = "use-bindgen",
+    not(feature = "windows-sys"),
     feature = "icu_config",
     not(feature = "icu_version_in_env")
 ))]
 include!(concat!(env!("OUT_DIR"), "/lib.rs"));
 
-#[cfg(not(feature = "use-bindgen"))]
+#[cfg(all(not(feature = "use-bindgen"), not(feature = "windows-sys")))]
 include!("../bindgen/macros.rs");
 
 #[cfg(all(
     not(feature = "use-bindgen"),
+    not(feature = "windows-sys"),
     not(feature = "icu_version_in_env"),
     not(feature = "icu_config")
 ))]
@@ -60,6 +66,7 @@ include!("../bindgen/lib.rs");
 
 #[cfg(all(
     not(feature = "use-bindgen"),
+    not(feature = "windows-sys"),
     feature = "icu_version_in_env",
     not(feature = "icu_config")
 ))]
@@ -69,8 +76,33 @@ include!(concat!(
     ".rs"
 ));
 
+#[cfg(feature = "windows-sys")]
+pub use windows_sys::Win32::Globalization::*;
+
+#[cfg(feature = "windows-sys")]
+pub type UChar = u16;
+
+#[cfg(feature = "windows-sys")]
+pub type UBool = i8;
+
+#[cfg(not(feature = "windows-sys"))]
+pub const U_ZERO_ERROR: UErrorCode = UErrorCode::U_ZERO_ERROR;
+
+#[cfg(not(feature = "windows-sys"))]
+pub const U_BUFFER_OVERFLOW_ERROR: UErrorCode = UErrorCode::U_BUFFER_OVERFLOW_ERROR;
+
+// Windows ICU symbols are not version-suffixed, so keep macro behavior as identity.
+#[cfg(feature = "windows-sys")]
+#[macro_export]
+macro_rules! versioned_function {
+    ($func_name:ident) => {
+        $crate::$func_name
+    };
+}
+
 // Add the ability to print the error code, so that it can be reported in
 // aggregated errors.
+#[cfg(not(feature = "windows-sys"))]
 impl std::fmt::Display for UErrorCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -79,6 +111,7 @@ impl std::fmt::Display for UErrorCode {
 
 extern crate libc;
 
+#[cfg(not(feature = "windows-sys"))]
 impl From<i8> for UCharCategory {
     fn from(value: i8) -> Self {
         match value {
