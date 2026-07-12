@@ -46,7 +46,7 @@ pub enum Error {
 
 impl Error {
     /// The error code denoting no error has happened.
-    pub const OK_CODE: sys::UErrorCode = sys::UErrorCode::U_ZERO_ERROR;
+    pub const OK_CODE: sys::UErrorCode = sys::U_ZERO_ERROR;
 
     /// Returns true if this error code corresponds to no error.
     pub fn is_ok(code: sys::UErrorCode) -> bool {
@@ -75,7 +75,7 @@ impl Error {
     /// `NULL` pointer), and then call the respective function.  The function will compute the
     /// buffer size, but will also return a bogus buffer overflow error.
     pub fn ok_preflight(status: sys::UErrorCode) -> Result<(), Self> {
-        if status > Self::OK_CODE && status != sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR {
+        if status > Self::OK_CODE && status != sys::U_BUFFER_OVERFLOW_ERROR {
             Err(Error::Sys(status))
         } else {
             Ok(())
@@ -95,7 +95,7 @@ impl Error {
     /// The ICU4C library has error codes for errors and warnings.
     pub fn is_err(&self) -> bool {
         match self {
-            Error::Sys(code) => *code > sys::UErrorCode::U_ZERO_ERROR,
+            Error::Sys(code) => *code > sys::U_ZERO_ERROR,
             Error::Wrapper(_) => true,
         }
     }
@@ -112,13 +112,13 @@ impl Error {
     /// buffer size, but will also return a bogus buffer overflow error.
     pub fn is_preflight_err(&self) -> bool {
         // We may expand the set of error codes that are exempt from error checks in preflight.
-        self.is_err() && !self.is_code(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR)
+        self.is_err() && !self.is_code(sys::U_BUFFER_OVERFLOW_ERROR)
     }
 
     /// Returns true if the error is, in fact, a warning (nonfatal).
     pub fn is_warn(&self) -> bool {
         match self {
-            Error::Sys(c) => *c < sys::UErrorCode::U_ZERO_ERROR,
+            Error::Sys(c) => *c < sys::U_ZERO_ERROR,
             _ => false,
         }
     }
@@ -206,17 +206,13 @@ where
 
     // ICU methods are inconsistent in whether they silently truncate the output or treat
     // the overflow as an error, so we need to check both cases.
-    if status == sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR ||
-       (Error::is_ok(status) &&
-            full_len > buffer_capacity
-                .try_into()
-                .map_err(|e| Error::wrapper(e))?) {
-
+    if status == sys::U_BUFFER_OVERFLOW_ERROR
+        || (Error::is_ok(status)
+            && full_len > buffer_capacity.try_into().map_err(|e| Error::wrapper(e))?)
+    {
         status = Error::OK_CODE;
         assert!(full_len > 0);
-        let full_len: usize = full_len
-            .try_into()
-            .map_err(|e| Error::wrapper(e))?;
+        let full_len: usize = full_len.try_into().map_err(|e| Error::wrapper(e))?;
         buf.resize(full_len, 0);
 
         // Same unsafe requirements as above, plus full_len must be exactly the output
@@ -235,9 +231,7 @@ where
 
     // Adjust the size of the buffer here.
     if full_len >= 0 {
-        let full_len: usize = full_len
-            .try_into()
-            .map_err(|e| Error::wrapper(e))?;
+        let full_len: usize = full_len.try_into().map_err(|e| Error::wrapper(e))?;
         buf.resize(full_len, 0);
     }
     String::from_utf8(buf).map_err(|e| e.utf8_error().into())
@@ -463,12 +457,12 @@ mod tests {
 
     #[test]
     fn test_error_code() {
-        let error = Error::ok_or_warning(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR)
+        let error = Error::ok_or_warning(sys::U_BUFFER_OVERFLOW_ERROR)
             .err()
             .unwrap();
-        assert!(error.is_code(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR));
+        assert!(error.is_code(sys::U_BUFFER_OVERFLOW_ERROR));
         assert!(!error.is_preflight_err());
-        assert!(!error.is_code(sys::UErrorCode::U_ZERO_ERROR));
+        assert!(!error.is_code(sys::U_ZERO_ERROR));
     }
 
     #[test]

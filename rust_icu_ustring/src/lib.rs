@@ -96,7 +96,7 @@ macro_rules! buffered_uchar_method_with_retry {
 
             // ICU methods are inconsistent in whether they silently truncate the output or treat
             // the overflow as an error, so we need to check both cases.
-            if status == sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR ||
+            if status == sys::U_BUFFER_OVERFLOW_ERROR ||
                (common::Error::is_ok(status) &&
                     full_len > $buffer_capacity
                         .try_into()
@@ -162,7 +162,7 @@ impl TryFrom<&str> for crate::UChar {
                 std::ptr::null_mut(),
                 0,
                 &mut dest_length,
-                rust_string.as_ptr() as *const raw::c_char,
+                rust_string.as_ptr() as _,
                 rust_string.len() as i32,
                 &mut status,
             );
@@ -181,7 +181,7 @@ impl TryFrom<&str> for crate::UChar {
                 rep.as_mut_ptr(),
                 rep.len() as i32,
                 &mut dest_length,
-                rust_string.as_ptr() as *const raw::c_char,
+                rust_string.as_ptr() as _,
                 rust_string.len() as i32,
                 &mut status,
             );
@@ -233,7 +233,7 @@ impl TryFrom<&UChar> for String {
         unsafe {
             assert!(common::Error::is_ok(status));
             versioned_function!(u_strToUTF8)(
-                buf.as_mut_ptr() as *mut raw::c_char,
+                buf.as_mut_ptr() as _,
                 buf.len() as i32,
                 &mut dest_length,
                 u.rep.as_ptr(),

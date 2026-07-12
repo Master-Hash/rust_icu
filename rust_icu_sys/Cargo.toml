@@ -19,10 +19,13 @@ keywords = ["icu", "unicode", "i18n", "l10n"]
 [dependencies]
 libc = "0.2.34"
 paste = "1.0"
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Globalization",
+], optional = true }
 
 [build-dependencies]
 anyhow = "1.0.72"
-bindgen = { version = "0.69.5", optional = true }
+bindgen = { version = "0.72.1", optional = true }
 lazy_static = "1.4"
 rust_icu_release = { path = "../rust_icu_release", version = "5.7.0" }
 
@@ -41,6 +44,7 @@ icu_config = []
 icu_version_in_env = []
 static = []
 
+windows-sys = ["dep:windows-sys"]
 
 [badges]
 maintenance = { status = "actively-developed" }
